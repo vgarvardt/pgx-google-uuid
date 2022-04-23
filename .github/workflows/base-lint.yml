@@ -5,7 +5,7 @@ concurrency: ${{ github.workflow }}
 
 on:
   push:
-    branches: [ master ]
+    branches: [ v4 ]
 
 jobs:
   lint:

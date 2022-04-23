@@ -3,7 +3,7 @@ name: "Base Branch: Test"
 
 on:
   push:
-    branches: [ master ]
+    branches: [ v4 ]
 
 jobs:
   test:

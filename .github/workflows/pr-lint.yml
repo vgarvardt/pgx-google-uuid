@@ -7,7 +7,7 @@ concurrency:
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ v4 ]
 
 jobs:
   lint:
@@ -26,5 +26,5 @@ jobs:
         uses: github/super-linter@v4
         env:
           VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: master
+          DEFAULT_BRANCH: v4
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
