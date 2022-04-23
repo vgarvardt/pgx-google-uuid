@@ -1,6 +1,7 @@
 # pgx-google-uuid
 
-Google UUID type support for [`jackc/pgx`](github.com/jackc/pgx) PostgreSQL driver
+[`github.com/google/uuid`](https://github.com/google/uuid) type support
+for [`github.com/jackc/pgx`](https://github.com/jackc/pgx) PostgreSQL driver
 
 Major package version corresponds to the major pgx version, e.g.:
 
