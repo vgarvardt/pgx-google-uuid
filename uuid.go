@@ -1,216 +1,150 @@
 package uuid
 
 import (
-	"database/sql/driver"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-var errUndefined = errors.New("cannot encode status undefined")
-var errBadStatus = errors.New("invalid status")
-
 // UUID pgx type wrapper for google/uuid.UUID
-type UUID struct {
-	UUID   uuid.UUID
-	Status pgtype.Status
+type UUID uuid.UUID
+
+// ScanUUID implements pgtype.UUIDScanner interface
+func (u *UUID) ScanUUID(v pgtype.UUID) error {
+	if !v.Valid {
+		return fmt.Errorf("cannot scan NULL into *uuid.UUID")
+	}
+
+	*u = v.Bytes
+	return nil
 }
 
-// Set implements pgtype.Value interface
-func (u *UUID) Set(src interface{}) error {
-	if src == nil {
-		*u = UUID{Status: pgtype.Null}
-		return nil
-	}
+// UUIDValue implements pgtype.UUIDValuer interface
+func (u UUID) UUIDValue() (pgtype.UUID, error) {
+	return pgtype.UUID{Bytes: u, Valid: true}, nil
+}
 
-	if value, ok := src.(interface{ Get() interface{} }); ok {
-		value2 := value.Get()
-		if value2 != value {
-			return u.Set(value2)
-		}
-	}
+// NullUUID pgx type wrapper for google/uuid.NullUUID
+type NullUUID uuid.NullUUID
 
-	switch value := src.(type) {
+// ScanUUID implements pgtype.UUIDScanner interface
+func (u *NullUUID) ScanUUID(v pgtype.UUID) error {
+	*u = NullUUID{UUID: v.Bytes, Valid: v.Valid}
+	return nil
+}
+
+// UUIDValue implements pgtype.UUIDValuer interface
+func (u NullUUID) UUIDValue() (pgtype.UUID, error) {
+	return pgtype.UUID{Bytes: u.UUID, Valid: u.Valid}, nil
+}
+
+// TryWrapUUIDEncodePlan implements pgtype.TryWrapEncodePlanFunc interface
+func TryWrapUUIDEncodePlan(value interface{}) (plan pgtype.WrappedEncodePlanNextSetter, nextValue interface{}, ok bool) {
+	switch value := value.(type) {
 	case uuid.UUID:
-		*u = UUID{UUID: value, Status: pgtype.Present}
-	case [16]byte:
-		*u = UUID{UUID: value, Status: pgtype.Present}
-	case []byte:
-		if len(value) != 16 {
-			return fmt.Errorf("[]byte must be 16 bytes to convert to UUID: %d", len(value))
-		}
-		*u = UUID{Status: pgtype.Present}
-		copy(u.UUID[:], value)
-	case string:
-		uid, err := uuid.Parse(value)
-		if err != nil {
-			return err
-		}
-		*u = UUID{UUID: uid, Status: pgtype.Present}
-	default:
-		// If all else fails see if pgtype.UUID can handle it. If so, translate through that.
-		pgUUID := &pgtype.UUID{}
-		if err := pgUUID.Set(value); err != nil {
-			return fmt.Errorf("cannot convert %v to UUID", value)
-		}
-
-		*u = UUID{UUID: pgUUID.Bytes, Status: pgUUID.Status}
+		return &wrapUUIDEncodePlan{}, UUID(value), true
+	case uuid.NullUUID:
+		return &wrapNullUUIDEncodePlan{}, NullUUID(value), true
 	}
 
-	return nil
+	return nil, nil, false
 }
 
-// Get implements pgtype.Value interface
-func (u UUID) Get() interface{} {
-	switch u.Status {
-	case pgtype.Present:
-		return u.UUID
-	case pgtype.Null:
-		return nil
-	default:
-		return u.Status
-	}
+type wrapUUIDEncodePlan struct {
+	next pgtype.EncodePlan
 }
 
-// AssignTo implements pgtype.Value interface
-func (u *UUID) AssignTo(dst interface{}) error {
-	switch u.Status {
-	case pgtype.Present:
-		switch v := dst.(type) {
-		case *uuid.UUID:
-			*v = u.UUID
-			return nil
-		case *[16]byte:
-			*v = u.UUID
-			return nil
-		case *[]byte:
-			*v = make([]byte, 16)
-			copy(*v, u.UUID[:])
-			return nil
-		case *string:
-			*v = u.UUID.String()
-			return nil
-		default:
-			if nextDst, retry := pgtype.GetAssignToDstType(v); retry {
-				return u.AssignTo(nextDst)
-			}
-			return fmt.Errorf("unable to assign to %T", dst)
-		}
+// SetNext implements pgtype.WrappedEncodePlanNextSetter interface
+func (plan *wrapUUIDEncodePlan) SetNext(next pgtype.EncodePlan) { plan.next = next }
 
-	case pgtype.Null:
-		return pgtype.NullAssignTo(dst)
+// Encode implements pgtype.EncodePlan interface
+func (plan *wrapUUIDEncodePlan) Encode(value interface{}, buf []byte) (newBuf []byte, err error) {
+	return plan.next.Encode(UUID(value.(uuid.UUID)), buf)
+}
+
+type wrapNullUUIDEncodePlan struct {
+	next pgtype.EncodePlan
+}
+
+// SetNext implements pgtype.WrappedEncodePlanNextSetter interface
+func (plan *wrapNullUUIDEncodePlan) SetNext(next pgtype.EncodePlan) { plan.next = next }
+
+// Encode implements pgtype.EncodePlan interface
+func (plan *wrapNullUUIDEncodePlan) Encode(value interface{}, buf []byte) (newBuf []byte, err error) {
+	return plan.next.Encode(NullUUID(value.(uuid.NullUUID)), buf)
+}
+
+// TryWrapUUIDScanPlan implements pgtype.TryWrapScanPlanFunc
+func TryWrapUUIDScanPlan(target interface{}) (plan pgtype.WrappedScanPlanNextSetter, nextDst interface{}, ok bool) {
+	switch target := target.(type) {
+	case *uuid.UUID:
+		return &wrapUUIDScanPlan{}, (*UUID)(target), true
+	case *uuid.NullUUID:
+		return &wrapNullUUIDScanPlan{}, (*NullUUID)(target), true
 	}
 
-	return fmt.Errorf("cannot assign %v into %T", u, dst)
+	return nil, nil, false
 }
 
-// DecodeText implemnts pgtype.TextDecoder interface
-func (u *UUID) DecodeText(_ *pgtype.ConnInfo, src []byte) error {
+type wrapUUIDScanPlan struct {
+	next pgtype.ScanPlan
+}
+
+// SetNext implements pgtype.WrappedScanPlanNextSetter interface
+func (plan *wrapUUIDScanPlan) SetNext(next pgtype.ScanPlan) { plan.next = next }
+
+// Scan implements pgtype.ScanPlan interface
+func (plan *wrapUUIDScanPlan) Scan(src []byte, dst interface{}) error {
+	return plan.next.Scan(src, (*UUID)(dst.(*uuid.UUID)))
+}
+
+type wrapNullUUIDScanPlan struct {
+	next pgtype.ScanPlan
+}
+
+// SetNext implements pgtype.WrappedScanPlanNextSetter interface
+func (plan *wrapNullUUIDScanPlan) SetNext(next pgtype.ScanPlan) { plan.next = next }
+
+// Scan implements pgtype.ScanPlan interface
+func (plan *wrapNullUUIDScanPlan) Scan(src []byte, dst interface{}) error {
+	return plan.next.Scan(src, (*NullUUID)(dst.(*uuid.NullUUID)))
+}
+
+// UUIDCodec pgx type wrapper for pgtype.Codec
+//revive:disable-next-line:exported
+type UUIDCodec struct {
+	pgtype.UUIDCodec
+}
+
+// DecodeValue implements pgtype.Codec interface
+func (UUIDCodec) DecodeValue(tm *pgtype.Map, oid uint32, format int16, src []byte) (interface{}, error) {
 	if src == nil {
-		*u = UUID{Status: pgtype.Null}
-		return nil
-	}
-
-	parsedUUID, err := uuid.ParseBytes(src)
-	if err != nil {
-		return err
-	}
-
-	*u = UUID{UUID: parsedUUID, Status: pgtype.Present}
-	return nil
-}
-
-// DecodeBinary implements pgtype.BinaryDecoder interface
-func (u *UUID) DecodeBinary(_ *pgtype.ConnInfo, src []byte) error {
-	if src == nil {
-		*u = UUID{Status: pgtype.Null}
-		return nil
-	}
-
-	if len(src) != 16 {
-		return fmt.Errorf("invalid length for UUID: %v", len(src))
-	}
-
-	*u = UUID{Status: pgtype.Present}
-	copy(u.UUID[:], src)
-	return nil
-}
-
-// EncodeText implements pgtype.TextEncoder interface
-func (u UUID) EncodeText(_ *pgtype.ConnInfo, buf []byte) ([]byte, error) {
-	switch u.Status {
-	case pgtype.Null:
 		return nil, nil
-	case pgtype.Undefined:
-		return nil, errUndefined
 	}
 
-	return append(buf, u.UUID.String()...), nil
-}
-
-// EncodeBinary implements pgtype.BinaryEncoder interface
-func (u UUID) EncodeBinary(_ *pgtype.ConnInfo, buf []byte) ([]byte, error) {
-	switch u.Status {
-	case pgtype.Null:
-		return nil, nil
-	case pgtype.Undefined:
-		return nil, errUndefined
+	var target uuid.UUID
+	scanPlan := tm.PlanScan(oid, format, &target)
+	if scanPlan == nil {
+		return nil, fmt.Errorf("PlanScan did not find a plan")
 	}
 
-	return append(buf, u.UUID[:]...), nil
-}
-
-// Scan implements the database/sql.Scanner interface.
-func (u *UUID) Scan(src interface{}) error {
-	if src == nil {
-		*u = UUID{Status: pgtype.Null}
-		return nil
-	}
-
-	switch src := src.(type) {
-	case string:
-		return u.DecodeText(nil, []byte(src))
-	case []byte:
-		return u.DecodeText(nil, src)
-	}
-
-	return fmt.Errorf("cannot scan %T", src)
-}
-
-// Value implements the database/sql/driver.Valuer interface.
-func (u UUID) Value() (driver.Value, error) {
-	return pgtype.EncodeValueText(u)
-}
-
-// MarshalJSON implements encoding/json.Marshaler interface
-func (u UUID) MarshalJSON() ([]byte, error) {
-	switch u.Status {
-	case pgtype.Present:
-		return []byte(`"` + u.UUID.String() + `"`), nil
-	case pgtype.Null:
-		return []byte("null"), nil
-	case pgtype.Undefined:
-		return nil, errUndefined
-	}
-
-	return nil, errBadStatus
-}
-
-// UnmarshalJSON implements encoding/json.Unmarshaler interface
-func (u *UUID) UnmarshalJSON(b []byte) error {
-	var uid uuid.NullUUID
-	err := uid.UnmarshalJSON(b)
+	err := scanPlan.Scan(src, &target)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	status := pgtype.Null
-	if uid.Valid {
-		status = pgtype.Present
-	}
-	*u = UUID{UUID: uid.UUID, Status: status}
+	return target, nil
+}
 
-	return nil
+// Register registers the github.com/google/uuid integration with a pgtype.Map.
+func Register(tm *pgtype.Map) {
+	tm.TryWrapEncodePlanFuncs = append([]pgtype.TryWrapEncodePlanFunc{TryWrapUUIDEncodePlan}, tm.TryWrapEncodePlanFuncs...)
+	tm.TryWrapScanPlanFuncs = append([]pgtype.TryWrapScanPlanFunc{TryWrapUUIDScanPlan}, tm.TryWrapScanPlanFuncs...)
+
+	tm.RegisterType(&pgtype.Type{
+		Name:  "uuid",
+		OID:   pgtype.UUIDOID,
+		Codec: UUIDCodec{},
+	})
 }

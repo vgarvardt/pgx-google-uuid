@@ -1,91 +1,73 @@
 package uuid_test
 
 import (
+	"context"
 	"testing"
 
-	"github.com/jackc/pgtype"
-	"github.com/jackc/pgtype/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxtest"
 	"github.com/stretchr/testify/require"
-
-	ggl "github.com/vgarvardt/pgx-google-uuid/v4"
+	pgxuuid "github.com/vgarvardt/pgx-google-uuid/v5"
 )
 
-func TestUUIDTranscode(t *testing.T) {
-	testutil.TestSuccessfulTranscode(t, "uuid", []interface{}{
-		&ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-		&ggl.UUID{Status: pgtype.Null},
-	})
+var defaultConnTestRunner pgxtest.ConnTestRunner
+
+func init() {
+	defaultConnTestRunner = pgxtest.DefaultConnTestRunner()
+	defaultConnTestRunner.AfterConnect = func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+		pgxuuid.Register(conn.TypeMap())
+	}
 }
 
-func TestUUIDSet(t *testing.T) {
-	t.Parallel()
+func TestCodecDecodeValue(t *testing.T) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+		original, err := uuid.NewRandom()
+		require.NoError(t, err)
 
-	tests := []struct {
-		name   string
-		source interface{}
-		result ggl.UUID
-	}{
-		{
-			name:   "source uuid type",
-			source: &ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-			result: ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-		},
-		{
-			name:   "source fixed bytes",
-			source: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-			result: ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-		},
-		{
-			name:   "source variable bytes",
-			source: []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
-			result: ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-		},
-		{
-			name:   "source string",
-			source: "00010203-0405-0607-0809-0a0b0c0d0e0f",
-			result: ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present},
-		},
-	}
+		rows, err := conn.Query(ctx, `select $1::uuid`, original)
+		require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var r ggl.UUID
-			err := r.Set(tt.source)
+		for rows.Next() {
+			values, err := rows.Values()
 			require.NoError(t, err)
-			assert.Equal(t, tt.result, r)
-		})
-	}
+
+			require.Len(t, values, 1)
+			v0, ok := values[0].(uuid.UUID)
+			require.True(t, ok)
+			require.Equal(t, original, v0)
+		}
+
+		require.NoError(t, rows.Err())
+
+		rows, err = conn.Query(ctx, `select $1::uuid`, nil)
+		require.NoError(t, err)
+
+		for rows.Next() {
+			values, err := rows.Values()
+			require.NoError(t, err)
+
+			require.Len(t, values, 1)
+			require.Equal(t, nil, values[0])
+		}
+
+		require.NoError(t, rows.Err())
+	})
 }
 
-func TestUUIDAssignTo(t *testing.T) {
-	t.Run("assign to fixed bytes", func(t *testing.T) {
-		src := ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present}
-		var dst [16]byte
-		expected := [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+func TestArray(t *testing.T) {
+	defaultConnTestRunner.RunTest(context.Background(), t, func(ctx context.Context, t testing.TB, conn *pgx.Conn) {
+		var inputSlice []uuid.UUID
 
-		err := src.AssignTo(&dst)
+		for i := 0; i < 10; i++ {
+			u, err := uuid.NewRandom()
+			require.NoError(t, err)
+			inputSlice = append(inputSlice, u)
+		}
+
+		var outputSlice []uuid.UUID
+		err := conn.QueryRow(ctx, `select $1::uuid[]`, inputSlice).Scan(&outputSlice)
 		require.NoError(t, err)
-		assert.Equal(t, expected, dst)
-	})
-
-	t.Run("assign to variable bytes", func(t *testing.T) {
-		src := ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present}
-		var dst []byte
-		expected := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-
-		err := src.AssignTo(&dst)
-		require.NoError(t, err)
-		assert.Equal(t, expected, dst)
-	})
-
-	t.Run("assign to string", func(t *testing.T) {
-		src := ggl.UUID{UUID: [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, Status: pgtype.Present}
-		var dst string
-		expected := "00010203-0405-0607-0809-0a0b0c0d0e0f"
-
-		err := src.AssignTo(&dst)
-		require.NoError(t, err)
-		assert.Equal(t, expected, dst)
+		require.Equal(t, inputSlice, outputSlice)
 	})
 }
