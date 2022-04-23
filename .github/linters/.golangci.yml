@@ -1,0 +1,17 @@
+---
+# See https://golangci-lint.run/usage/configuration/#config-file for more information
+run:
+  timeout: 5m
+  skip-dirs: [ ]
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - revive
+    - goimports
+  fast: false
+linters-settings:
+  gofmt:
+    simplify: false
+issues:
+  exclude-use-default: false
