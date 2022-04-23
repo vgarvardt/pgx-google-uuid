@@ -112,6 +112,7 @@ func (plan *wrapNullUUIDScanPlan) Scan(src []byte, dst interface{}) error {
 }
 
 // UUIDCodec pgx type wrapper for pgtype.Codec
+//revive:disable-next-line:exported
 type UUIDCodec struct {
 	pgtype.UUIDCodec
 }
