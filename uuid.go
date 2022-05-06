@@ -40,7 +40,7 @@ func (u NullUUID) UUIDValue() (pgtype.UUID, error) {
 }
 
 // TryWrapUUIDEncodePlan implements pgtype.TryWrapEncodePlanFunc interface
-func TryWrapUUIDEncodePlan(value interface{}) (plan pgtype.WrappedEncodePlanNextSetter, nextValue interface{}, ok bool) {
+func TryWrapUUIDEncodePlan(value any) (plan pgtype.WrappedEncodePlanNextSetter, nextValue any, ok bool) {
 	switch value := value.(type) {
 	case uuid.UUID:
 		return &wrapUUIDEncodePlan{}, UUID(value), true
@@ -59,7 +59,7 @@ type wrapUUIDEncodePlan struct {
 func (plan *wrapUUIDEncodePlan) SetNext(next pgtype.EncodePlan) { plan.next = next }
 
 // Encode implements pgtype.EncodePlan interface
-func (plan *wrapUUIDEncodePlan) Encode(value interface{}, buf []byte) (newBuf []byte, err error) {
+func (plan *wrapUUIDEncodePlan) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	return plan.next.Encode(UUID(value.(uuid.UUID)), buf)
 }
 
@@ -71,12 +71,12 @@ type wrapNullUUIDEncodePlan struct {
 func (plan *wrapNullUUIDEncodePlan) SetNext(next pgtype.EncodePlan) { plan.next = next }
 
 // Encode implements pgtype.EncodePlan interface
-func (plan *wrapNullUUIDEncodePlan) Encode(value interface{}, buf []byte) (newBuf []byte, err error) {
+func (plan *wrapNullUUIDEncodePlan) Encode(value any, buf []byte) (newBuf []byte, err error) {
 	return plan.next.Encode(NullUUID(value.(uuid.NullUUID)), buf)
 }
 
 // TryWrapUUIDScanPlan implements pgtype.TryWrapScanPlanFunc
-func TryWrapUUIDScanPlan(target interface{}) (plan pgtype.WrappedScanPlanNextSetter, nextDst interface{}, ok bool) {
+func TryWrapUUIDScanPlan(target any) (plan pgtype.WrappedScanPlanNextSetter, nextDst any, ok bool) {
 	switch target := target.(type) {
 	case *uuid.UUID:
 		return &wrapUUIDScanPlan{}, (*UUID)(target), true
@@ -95,7 +95,7 @@ type wrapUUIDScanPlan struct {
 func (plan *wrapUUIDScanPlan) SetNext(next pgtype.ScanPlan) { plan.next = next }
 
 // Scan implements pgtype.ScanPlan interface
-func (plan *wrapUUIDScanPlan) Scan(src []byte, dst interface{}) error {
+func (plan *wrapUUIDScanPlan) Scan(src []byte, dst any) error {
 	return plan.next.Scan(src, (*UUID)(dst.(*uuid.UUID)))
 }
 
@@ -107,7 +107,7 @@ type wrapNullUUIDScanPlan struct {
 func (plan *wrapNullUUIDScanPlan) SetNext(next pgtype.ScanPlan) { plan.next = next }
 
 // Scan implements pgtype.ScanPlan interface
-func (plan *wrapNullUUIDScanPlan) Scan(src []byte, dst interface{}) error {
+func (plan *wrapNullUUIDScanPlan) Scan(src []byte, dst any) error {
 	return plan.next.Scan(src, (*NullUUID)(dst.(*uuid.NullUUID)))
 }
 
@@ -118,7 +118,7 @@ type UUIDCodec struct {
 }
 
 // DecodeValue implements pgtype.Codec interface
-func (UUIDCodec) DecodeValue(tm *pgtype.Map, oid uint32, format int16, src []byte) (interface{}, error) {
+func (UUIDCodec) DecodeValue(tm *pgtype.Map, oid uint32, format int16, src []byte) (any, error) {
 	if src == nil {
 		return nil, nil
 	}
