@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxtest"
 	"github.com/stretchr/testify/require"
+
 	pgxuuid "github.com/vgarvardt/pgx-google-uuid/v5"
 )
 
