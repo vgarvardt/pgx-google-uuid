@@ -8,7 +8,7 @@ Major package version corresponds to the major pgx version, e.g.:
 - `github.com/vgarvardt/pgx-google-uuid/v4` -> `github.com/jackc/pgx/v4`
 - `github.com/vgarvardt/pgx-google-uuid/v5` -> `github.com/jackc/pgx/v5`
 
-## Example
+## Usage example
 
 ```go
 package main
