@@ -14,31 +14,31 @@ Major package version corresponds to the major pgx version, e.g.:
 package main
 
 import (
-	"context"
-	"os"
+  "context"
+  "os"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	pgxUUID "github.com/vgarvardt/pgx-google-uuid/v5"
+  "github.com/jackc/pgx/v5"
+  "github.com/jackc/pgx/v5/pgxpool"
+  pgxUUID "github.com/vgarvardt/pgx-google-uuid/v5"
 )
 
 func main() {
-	pgxConfig, err := pgxpool.ParseConfig(os.Getenv("PG_URI"))
-	if err != nil {
-		panic(err)
-	}
+  pgxConfig, err := pgxpool.ParseConfig(os.Getenv("PG_URI"))
+  if err != nil {
+    panic(err)
+  }
 
-	pgxConfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		pgxUUID.Register(conn.TypeMap())
-		return nil
-	}
+  pgxConfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+    pgxUUID.Register(conn.TypeMap())
+    return nil
+  }
 
-	pgxConnPool, err := pgxpool.ConnectConfig(context.TODO(), pgxConfig)
-	if err != nil {
-		panic(err)
-	}
+  pgxConnPool, err := pgxpool.ConnectConfig(context.TODO(), pgxConfig)
+  if err != nil {
+    panic(err)
+  }
 
-	// use pgxConnPool
-	...
+  // use pgxConnPool
+  ...
 }
 ```
