@@ -7,8 +7,8 @@ github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsI
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b h1:C8S2+VttkHFdOOCXJe+YGfa4vHYwlt4Zx+IVXQ97jYg=
 github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b/go.mod h1:vsD4gTJCa9TptPL8sPkXrLZ+hDuNrZCnj29CQpr4X1E=
-github.com/jackc/pgx/v5 v5.0.0-beta.1 h1:tQXW/iBC2BYQ/SZK/PBpiW1Cn5/6vMzLBv8Unphg2Xw=
-github.com/jackc/pgx/v5 v5.0.0-beta.1/go.mod h1:QJ8xU09HYKHOccHeisi/6sXeRG4dd3AxuV7cmKET4WA=
+github.com/jackc/pgx/v5 v5.0.0-beta.2 h1:qDodMLREJ41Gv3cxNOtz5HlayH1IAv0q2pHQHJIgHf0=
+github.com/jackc/pgx/v5 v5.0.0-beta.2/go.mod h1:QJ8xU09HYKHOccHeisi/6sXeRG4dd3AxuV7cmKET4WA=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
