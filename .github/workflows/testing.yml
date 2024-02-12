@@ -1,9 +1,14 @@
 ---
-name: "Base Branch: Test"
+name: "Test"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:
     branches: [ master ]
+  pull_request:
 
 jobs:
   test:
@@ -12,20 +17,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup dependencies
         uses: ./.github/actions/setup-deps
         with:
-          token: ${{secrets.GITHUB_TOKEN}}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: task test
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
         if: success()
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.txt
           fail_ci_if_error: false
