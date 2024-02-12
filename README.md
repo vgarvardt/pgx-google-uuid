@@ -33,7 +33,7 @@ func main() {
     return nil
   }
 
-  pgxConnPool, err := pgxpool.ConnectConfig(context.TODO(), pgxConfig)
+  pgxConnPool, err := pgxpool.NewWithConfig(context.TODO(), pgxConfig)
   if err != nil {
     panic(err)
   }
