@@ -10,11 +10,21 @@ on:
     branches: [ master ]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    permissions:
+      contents: read
+      # `super-linter` reports the outcome of every linter as a commit status
+      statuses: write
+      # `golangci-lint-action` needs it to fetch the diff for `only-new-issues`
+      pull-requests: read
 
     steps:
       - name: Check out code
