@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup dependencies
         uses: ./.github/actions/setup-deps
