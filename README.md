@@ -8,6 +8,11 @@ Major package version corresponds to the major pgx version, e.g.:
 - `github.com/vgarvardt/pgx-google-uuid/v4` -> `github.com/jackc/pgx/v4`
 - `github.com/vgarvardt/pgx-google-uuid/v5` -> `github.com/jackc/pgx/v5`
 
+## Tests
+
+Run `make test` with Go, Docker, and Docker Compose installed. This starts PostgreSQL,
+runs the tests with coverage, and removes the test containers and volumes afterward.
+
 ## Usage example
 
 ```go

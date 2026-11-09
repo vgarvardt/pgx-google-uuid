@@ -1,10 +1,6 @@
 ---
 name: setup-deps
 description: Install all the dependencies required for workflows
-inputs:
-  token:
-    required: true
-    description: GitHub token, most likely "secrets.GITHUB_TOKEN"
 runs:
   using: composite
   steps:
@@ -12,8 +8,3 @@ runs:
       uses: actions/setup-go@v5
       with:
         go-version-file: "./go.mod"
-
-    - name: Install Task
-      uses: arduino/setup-task@v1
-      with:
-        repo-token: ${{ inputs.token }}

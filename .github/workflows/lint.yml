@@ -35,6 +35,7 @@ jobs:
           persist-credentials: false
 
       - name: Lint Code Base
+        background: true
         uses: super-linter/super-linter@v9
         env:
           VALIDATE_ALL_CODEBASE: ${{ github.event_name != 'pull_request' }}
@@ -44,7 +45,10 @@ jobs:
           SAVE_SUPER_LINTER_SUMMARY: true
           # Go is linted separately.
           VALIDATE_EDITORCONFIG: true
-          VALIDATE_GITHUB_ACTIONS: true
+          # TODO: enable GHA linter back once these fixes are merged and released
+          # - https://github.com/rhysd/actionlint/pull/694
+          # - https://github.com/rhysd/actionlint/pull/732
+          # VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_GITHUB_ACTIONS_ZIZMOR: true
           VALIDATE_GITLEAKS: true
           VALIDATE_GIT_MERGE_CONFLICT_MARKERS: true
@@ -55,10 +59,23 @@ jobs:
           VALIDATE_YAML: true
           VALIDATE_YAML_PRETTIER: true
 
+      # using fork from https://github.com/super-linter/super-linter/issues/8189 because of the issues mentioned above
+      - name: Run actionlint fork
+        background: true
+        uses: kjanat/actionlint@v1.17.1
+
+      - name: Lint Makefile
+        background: true
+        run: >-
+          go run github.com/checkmake/checkmake/cmd/checkmake@v0.3.2
+          --config .github/linters/checkmake.ini Makefile
+
       - name: Setup dependencies
+        background: true
         uses: ./.github/actions/setup-deps
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for background steps
+        wait-all:
 
       - name: Lint Golang
         uses: golangci/golangci-lint-action@v9

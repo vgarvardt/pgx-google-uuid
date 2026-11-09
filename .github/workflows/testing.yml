@@ -30,11 +30,9 @@ jobs:
 
       - name: Setup dependencies
         uses: ./.github/actions/setup-deps
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
-        run: task test
+        run: make test
 
       - name: Upload coverage to Codecov
         if: success()
@@ -42,5 +40,5 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          file: ./coverage.txt
+          files: ./coverage.txt
           fail_ci_if_error: false
