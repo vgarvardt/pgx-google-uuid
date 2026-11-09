@@ -57,8 +57,6 @@ jobs:
 
       - name: Setup dependencies
         uses: ./.github/actions/setup-deps
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Golang
         uses: golangci/golangci-lint-action@v9
