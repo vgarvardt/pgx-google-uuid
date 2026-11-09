@@ -35,6 +35,7 @@ jobs:
           persist-credentials: false
 
       - name: Lint Code Base
+        background: true
         uses: super-linter/super-linter@v9
         env:
           VALIDATE_ALL_CODEBASE: ${{ github.event_name != 'pull_request' }}
@@ -55,8 +56,18 @@ jobs:
           VALIDATE_YAML: true
           VALIDATE_YAML_PRETTIER: true
 
+      - name: Lint Makefile
+        background: true
+        run: >-
+          go run github.com/checkmake/checkmake/cmd/checkmake@v0.3.2
+          --config .github/linters/checkmake.ini Makefile
+
       - name: Setup dependencies
+        background: true
         uses: ./.github/actions/setup-deps
+
+      - name: Wait for background steps
+        wait-all:
 
       - name: Lint Golang
         uses: golangci/golangci-lint-action@v9
